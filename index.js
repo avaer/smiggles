@@ -324,10 +324,26 @@ console.log('pre uint16 length 1', length);
   _serialize(o);
   return bs;
 };
-const deserialize = b => {
-  if (Array.isArray(b)) {
-    b = Buffer.concat(b);
-  }
+const deserialize = bs => {
+  const b = (() => {
+    if (Buffer.isBuffer(bs) && (bs.byteOffset % Float64Array.BYTES_PER_ELEMENT) === 0) {
+      return bs;
+    } else {
+      const bsArray = Array.isArray(bs) ? bs : [bs];
+      let bSize = 0;
+      for (let i = 0; i < bsArray.length; i++) {
+        bSize += bsArray[i].length;
+      }
+      const result = Buffer.from(new ArrayBuffer(bSize));
+      let length = 0;
+      for (let i = 0; i < bsArray.length; i++) {
+        const srcBuffer = bsArray[i];
+        result.set(srcBuffer, length);
+        length += srcBuffer.length;
+      }
+      return result;
+    }
+  })();
 
   let result;
   let length = 0;
