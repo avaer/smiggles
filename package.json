@@ -1,0 +1,19 @@
+{
+  "name": "smiggles",
+  "version": "0.0.1",
+  "description": "The ultimate in node cerealization",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modulesio/smiggles.git"
+  },
+  "author": "Avaer Kazmer <a@modules.io>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/modulesio/smiggles/issues"
+  },
+  "homepage": "https://github.com/modulesio/smiggles#readme"
+}
