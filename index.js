@@ -3,7 +3,6 @@ const TYPES = {
   boolean: id++,
   number: id++,
   string: id++,
-  object: id++,
   null: id++,
   array: id++,
   object: id++,
