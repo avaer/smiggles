@@ -104,12 +104,9 @@ const serialize = o => {
         bs.push(_lengthBuffer(o.length));
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-console.log('pre array length 1', length);
-
         for (let i = 0; i < o.length; i++) {
           _serialize(o[i]);
         }
-console.log('post array length 1', length);
       } else if (o instanceof Int8Array) {
         bs.push(_typeBuffer(TYPES.Int8Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
@@ -150,8 +147,6 @@ console.log('post array length 1', length);
         bs.push(buffer);
         length += buffer.byteLength;
       } else if (o instanceof Int16Array) {
-console.log('pre uint16 length 1', length);
-
         bs.push(_typeBuffer(TYPES.Int16Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -374,8 +369,6 @@ const deserialize = bs => {
       const arrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
 
-console.log('pre array length 2', length);
-
       const array = Array(arrayLength);
       for (let i = 0; i < arrayLength; i++) {
         _recurse(value => {
@@ -383,8 +376,6 @@ console.log('pre array length 2', length);
         });
       }
       setter(array);
-
-console.log('post array length 2', length);
     } else if (type === TYPES.Int8Array) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
