@@ -92,7 +92,7 @@ const serialize = o => {
       if (o === null) {
         bs.push(_typeBuffer(TYPES.null));
         length += Uint8Array.BYTES_PER_ELEMENT;
-      } else if (Array.isArray(o)) {
+      } else if (o.constructor.name === 'Array') {
         bs.push(_typeBuffer(TYPES.array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -337,10 +337,10 @@ const serialize = o => {
 };
 const deserialize = bs => {
   const b = (() => {
-    if (Buffer.isBuffer(bs) && (bs.byteOffset % Float64Array.BYTES_PER_ELEMENT) === 0) {
+    if (bs.constructor.name === 'Buffer' && (bs.byteOffset % Float64Array.BYTES_PER_ELEMENT) === 0) {
       return bs;
     } else {
-      const bsArray = Array.isArray(bs) ? bs : [bs];
+      const bsArray = bs.constructor.name === 'Array' ? bs : [bs];
       let bSize = 0;
       for (let i = 0; i < bsArray.length; i++) {
         bSize += bsArray[i].length;
