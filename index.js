@@ -108,7 +108,7 @@ const serialize = o => {
         for (let i = 0; i < o.length; i++) {
           _serialize(o[i]);
         }
-      } else if (o instanceof ArrayBuffer) {
+      } else if (o.constructor.name === 'ArrayBuffer') {
         bs.push(_typeBuffer(TYPES.ArrayBuffer));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -124,14 +124,14 @@ const serialize = o => {
 
         bs.push(arrayBufferBuffer);
         length += arrayBufferBuffer.length;
-      } else if (o instanceof Int8Array) {
+      } else if (o.constructor.name === 'Int8Array') {
         bs.push(_typeBuffer(TYPES.Int8Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Uint8Array) {
+      } else if (o.constructor.name === 'Uint8Array') {
         bs.push(_typeBuffer(TYPES.Uint8Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -147,7 +147,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Uint8ClampedArray) {
+      } else if (o.constructor.name === 'Uint8ClampedArray') {
         bs.push(_typeBuffer(TYPES.Uint8ClampedArray));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -163,7 +163,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Int16Array) {
+      } else if (o.constructor.name === 'Int16Array') {
         bs.push(_typeBuffer(TYPES.Int16Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -185,7 +185,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Uint16Array) {
+      } else if (o.constructor.name === 'Uint16Array') {
         bs.push(_typeBuffer(TYPES.Uint16Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -207,7 +207,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Int32Array) {
+      } else if (o.constructor.name === 'Int32Array') {
         bs.push(_typeBuffer(TYPES.Int32Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -229,7 +229,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Uint32Array) {
+      } else if (o.constructor.name === 'Uint32Array') {
         bs.push(_typeBuffer(TYPES.Uint32Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -251,7 +251,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Float32Array) {
+      } else if (o.constructor.name === 'Float32Array') {
         bs.push(_typeBuffer(TYPES.Float32Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
@@ -273,7 +273,7 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
-      } else if (o instanceof Float64Array) {
+      } else if (o.constructor.name === 'Float64Array') {
         bs.push(_typeBuffer(TYPES.Float64Array));
         length += Uint8Array.BYTES_PER_ELEMENT;
 
