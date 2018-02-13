@@ -19,6 +19,8 @@ const TYPES = {
   ImageBitmap: id++,
 };
 
+let localImageBitmap = typeof ImageBitmap !== 'undefined' ? ImageBitmap : null;
+
 const _typeBuffer = typeId => {
   const uint8Array = Uint8Array.from([typeId]);
   return new Buffer(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
@@ -529,7 +531,7 @@ const deserialize = bs => {
       const data = new Uint8Array(b.buffer, b.byteOffset + length, dataLength);
       length += dataLength;
 
-      setter(new ImageBitmap(width, height, data));
+      setter(new localImageBitmap(width, height, data));
     } else if (type === TYPES.object) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
@@ -560,8 +562,12 @@ const deserialize = bs => {
   });
   return result;
 };
+const bind = bindings => {
+  localImageBitmap = bindings.ImageBitmap;
+};
 
 module.exports = {
   serialize,
   deserialize,
+  bind,
 };

@@ -7,7 +7,9 @@ class ImageBitmap {
     this.data = data;
   }
 }
-global.ImageBitmap = ImageBitmap;
+smiggles.bind({
+  ImageBitmap,
+});
 
 const arrayBuffer = new ArrayBuffer(3 * Float32Array.BYTES_PER_ELEMENT);
 new Float32Array(arrayBuffer, 0, 3).set(Float32Array.from([9, 8, 7]));
