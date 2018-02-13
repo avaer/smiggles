@@ -16,6 +16,7 @@ const TYPES = {
   Uint32Array: id++,
   Float32Array: id++,
   Float64Array: id++,
+  ImageBitmap: id++,
 };
 
 const _typeBuffer = typeId => {
@@ -295,6 +296,26 @@ const serialize = o => {
         const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
         bs.push(buffer);
         length += buffer.byteLength;
+      } else if (o.constructor.name === 'ImageBitmap') {
+        bs.push(_typeBuffer(TYPES.ImageBitmap));
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
+        if (lengthAlignBuffer) {
+          bs.push(lengthAlignBuffer);
+          length += lengthAlignBuffer.length;
+        }
+
+        bs.push(_lengthBuffer(o.width));
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        bs.push(_lengthBuffer(o.height));
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        const dataLength = o.width * o.height * 4;
+        const dataBuffer = new Buffer(o.data.buffer, o.data.byteOffset, dataLength);
+        bs.push(dataBuffer);
+        length += dataBuffer.byteLength;
       } else {
         bs.push(_typeBuffer(TYPES.object));
         length += Uint8Array.BYTES_PER_ELEMENT;
@@ -495,6 +516,20 @@ const deserialize = bs => {
       const typedArray = new Float64Array(b.buffer, b.byteOffset + length, typedArrayLength);
       setter(typedArray);
       length += typedArray.byteLength;
+    } else if (type === TYPES.ImageBitmap) {
+      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+
+      const width = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+      length += Uint32Array.BYTES_PER_ELEMENT;
+
+      const height = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+      length += Uint32Array.BYTES_PER_ELEMENT;
+
+      const dataLength = width * height * 4;
+      const data = new Uint8Array(b.buffer, b.byteOffset + length, dataLength);
+      length += dataLength;
+
+      setter(new ImageBitmap(width, height, data));
     } else if (type === TYPES.object) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
