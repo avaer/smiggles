@@ -158,9 +158,43 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(1024)) =>
         buffer.set(_typeBuffer(TYPES.Int8Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
-        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        buffer.set(dataBuffer, length);
-        length += dataBuffer.byteLength;
+        const linkage = transferList.includes(o.buffer) ? LINKAGE.TRANSFER : LINKAGE.INLINE;
+        buffer.set(_typeBuffer(linkage), length);
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        if (linkage === LINKAGE.INLINE) {
+          buffer.set(_typeBuffer(TYPES.Int8Array), length);
+          length += Uint8Array.BYTES_PER_ELEMENT;
+
+          const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
+          if (lengthAlignBuffer) {
+            buffer.set(lengthAlignBuffer, length);
+            length += lengthAlignBuffer.length;
+          }
+
+          buffer.set(_lengthBuffer(o.length), length);
+          length += Uint32Array.BYTES_PER_ELEMENT;
+
+          const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+          buffer.set(dataBuffer, length);
+          length += dataBuffer.byteLength;
+        } else {
+          const addressAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
+          if (addressAlignBuffer) {
+            buffer.set(addressAlignBuffer, length);
+            length += addressAlignBuffer.length;
+          }
+
+          const rawBuffer = new localRawBuffer(o.buffer);
+          const address = rawBuffer.toAddress();
+          buffer.set(_addressBuffer(address), length);
+          length += Float64Array.BYTES_PER_ELEMENT * 2;
+
+          buffer.set(_lengthBuffer(o.byteOffset), length);
+          length += Uint32Array.BYTES_PER_ELEMENT;
+          buffer.set(_lengthBuffer(o.length), length);
+          length += Uint32Array.BYTES_PER_ELEMENT;
+        }
       } else if (o.constructor.name === 'Uint8Array') {
         buffer.set(_typeBuffer(TYPES.Uint8Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
@@ -452,14 +486,37 @@ const deserialize = arrayBuffer => {
         setter(arrayBuffer);
       }
     } else if (type === TYPES.Int8Array) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      const linkage = new Uint8Array(b.buffer, b.byteOffset + length, 1)[0];
+      if (linkage === LINKAGE.INLINE) {
+        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
-      const typedArrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
-      length += Uint32Array.BYTES_PER_ELEMENT;
+        const typedArrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+        length += Uint32Array.BYTES_PER_ELEMENT;
 
-      const typedArray = new Int8Array(b.buffer, b.byteOffset + length, typedArrayLength);
-      setter(typedArray);
-      length += typedArray.byteLength;
+        const typedArray = new Int8Array(b.buffer, b.byteOffset + length, typedArrayLength);
+        setter(typedArray);
+        length += typedArray.byteLength;
+      } else {
+        length += _getAlignFixOffset(length, Float64Array.BYTES_PER_ELEMENT);
+
+        const address = Array.from(new Float64Array(b.buffer, b.byteOffset + length, 2));
+        length += Float64Array.BYTES_PER_ELEMENT * 2;
+
+        let rawBuffer = transferList.find(transfer => transfer.peekAddress() === address[0]);
+        if (!rawBuffer) {
+          rawBuffer = localRawBuffer.fromAddress(address);
+          transferList.push(rawBuffer);
+        }
+        const arrayBuffer = rawBuffer.getArrayBuffer();
+
+        const typedArrayOffset = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+        length += Uint32Array.BYTES_PER_ELEMENT;
+        const typedArrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        const typedArray = new Int8Array(arrayBuffer, typedArrayOffset, typedArrayLength);
+        setter(typedArray);
+      }
     } else if (type === TYPES.Uint8Array) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
@@ -586,7 +643,7 @@ const deserialize = arrayBuffer => {
   _recurse(newResult => {
     result = newResult;
   });
-  if (typeof result === 'object' && result !== null) {
+  if (typeof result === 'object' && result !== null) { // XXX attach this to the individual objects
     result[transferListSymbol] = transferList;
   }
   return result;

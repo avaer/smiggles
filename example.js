@@ -28,6 +28,7 @@ const buffer = smiggles.serialize([
   },
   Uint8ClampedArray.from([7]),
   null,
+  new Int8Array(arrayBuffer, 4, 4),
   Uint16Array.from([8]),
   Float32Array.from([1,2,3,4]),
   arrayBuffer,
