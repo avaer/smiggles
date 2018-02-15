@@ -317,6 +317,7 @@ const deserialize = arrayBuffer => {
       length += Uint32Array.BYTES_PER_ELEMENT;
 
       const typedArray = new constructor(arrayBuffer, typedArrayOffset, typedArrayLength);
+      typedArray[transferListSymbol] = rawBuffer; // bind storage lifetime
       setter(typedArray);
     }
   };
@@ -379,6 +380,7 @@ const deserialize = arrayBuffer => {
           transferList.push(rawBuffer);
         }
         const arrayBuffer = rawBuffer.getArrayBuffer();
+        arrayBuffer[transferListSymbol] = rawBuffer; // bind storage lifetime
         setter(arrayBuffer);
       }
     } else if (type === TYPES.Int8Array) {
@@ -441,9 +443,6 @@ const deserialize = arrayBuffer => {
   _recurse(newResult => {
     result = newResult;
   });
-  if (typeof result === 'object' && result !== null) { // XXX attach this to the individual objects
-    result[transferListSymbol] = transferList;
-  }
   return result;
 };
 const bind = bindings => {
