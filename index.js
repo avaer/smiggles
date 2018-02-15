@@ -592,8 +592,12 @@ const deserialize = arrayBuffer => {
   return result;
 };
 const bind = bindings => {
-  localImageBitmap = bindings.ImageBitmap;
-  localRawBuffer = bindings.RawBuffer;
+  if (bindings.ImageBitmap !== undefined) {
+    localImageBitmap = bindings.ImageBitmap;
+  }
+  if (bindings.RawBuffer !== undefined) {
+    localRawBuffer = bindings.RawBuffer;
+  }
 };
 
 module.exports = {
