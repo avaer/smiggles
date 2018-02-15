@@ -1,6 +1,6 @@
 {
   "name": "smiggles",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "The ultimate in node cerealization",
   "main": "index.js",
   "scripts": {
