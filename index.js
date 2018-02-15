@@ -20,6 +20,12 @@ const TYPES = {
 };
 
 let localImageBitmap = typeof ImageBitmap !== 'undefined' ? ImageBitmap : null;
+let localRawBuffer = typeof RawBuffer !== 'undefined' ? RawBuffer : null;
+
+const LINKAGE = {
+  INLINE: 0,
+  TRANSFER: 1,
+};
 
 const _typeBuffer = typeId => {
   const uint8Array = Uint8Array.from([typeId]);
@@ -53,7 +59,11 @@ const _numberBuffer = n => {
   const float64Array = Float64Array.from([n]);
   return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
 };
-const serialize = (o, arrayBuffer = new ArrayBuffer(1024)) => {
+const _addressBuffer = address => {
+  const float64Array = Float64Array.from(address);
+  return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
+};
+const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(1024)) => {
   const buffer = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
   let length = 0;
   const _serialize = o => {
@@ -115,18 +125,34 @@ const serialize = (o, arrayBuffer = new ArrayBuffer(1024)) => {
         buffer.set(_typeBuffer(TYPES.ArrayBuffer), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
-        const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
-        if (lengthAlignBuffer) {
-          buffer.set(lengthAlignBuffer, length);
-          length += lengthAlignBuffer.length;
+        const linkage = transferList.includes(o) ? LINKAGE.TRANSFER : LINKAGE.INLINE;
+        buffer.set(_typeBuffer(linkage), length);
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        if (linkage === LINKAGE.INLINE) {
+          const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
+          if (lengthAlignBuffer) {
+            buffer.set(lengthAlignBuffer, length);
+            length += lengthAlignBuffer.length;
+          }
+
+          const arrayBufferBuffer = new Buffer(o, 0, o.byteLength);
+          buffer.set(_lengthBuffer(arrayBufferBuffer.length), length);
+          length += Uint32Array.BYTES_PER_ELEMENT;
+
+          buffer.set(arrayBufferBuffer, length);
+          length += arrayBufferBuffer.length;
+        } else {
+          const addressAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
+          if (addressAlignBuffer) {
+            buffer.set(addressAlignBuffer, length);
+            length += addressAlignBuffer.length;
+          }
+
+          const rawBuffer = new localRawBuffer(o);
+          buffer.set(_addressBuffer(rawBuffer.toAddress()), length);
+          length += Float64Array.BYTES_PER_ELEMENT * 2;
         }
-
-        const arrayBufferBuffer = new Buffer(o, 0, o.byteLength);
-        buffer.set(_lengthBuffer(arrayBufferBuffer.length), length);
-        length += Uint32Array.BYTES_PER_ELEMENT;
-
-        buffer.set(arrayBufferBuffer, length);
-        length += arrayBufferBuffer.length;
       } else if (o.constructor.name === 'Int8Array') {
         buffer.set(_typeBuffer(TYPES.Int8Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
@@ -360,6 +386,7 @@ const serialize = (o, arrayBuffer = new ArrayBuffer(1024)) => {
 };
 const deserialize = arrayBuffer => {
   const b = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
+  const transferList = [];
 
   let result;
   let length = 0;
@@ -399,14 +426,30 @@ const deserialize = arrayBuffer => {
       }
       setter(array);
     } else if (type === TYPES.ArrayBuffer) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      const linkage = new Uint8Array(b.buffer, b.byteOffset + length, 1)[0];
+      if (linkage === LINKAGE.INLINE) {
+        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
-      const arrayBufferLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
-      length += Uint32Array.BYTES_PER_ELEMENT;
+        const arrayBufferLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
+        length += Uint32Array.BYTES_PER_ELEMENT;
 
-      const arrayBuffer = b.buffer.slice(b.byteOffset + length, b.byteOffset + length + arrayBufferLength);
-      setter(arrayBuffer);
-      length += arrayBuffer.byteLength;
+        const arrayBuffer = b.buffer.slice(b.byteOffset + length, b.byteOffset + length + arrayBufferLength);
+        setter(arrayBuffer);
+        length += arrayBuffer.byteLength;
+      } else {
+        length += _getAlignFixOffset(length, Float64Array.BYTES_PER_ELEMENT);
+
+        const address = Array.from(new Float64Array(b.buffer, b.byteOffset + length, 2));
+        length += Float64Array.BYTES_PER_ELEMENT * 2;
+
+        const rawBuffer = localRawBuffer.fromAddress(address);
+        const arrayBuffer = rawBuffer.getArrayBuffer();
+        setter(arrayBuffer);
+
+        if (!transferList.some(transfer => transfer.equals(rawBuffer))) {
+          transferList.push(rawBuffer);
+        }
+      }
     } else if (type === TYPES.Int8Array) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
@@ -542,10 +585,18 @@ const deserialize = arrayBuffer => {
   _recurse(newResult => {
     result = newResult;
   });
+  if (transferList.length > 0) { // XXX return this for user management instead
+    process.nextTick(() => {
+      for (let i = 0; i < transferList.length; i++) {
+        transferList[i].destroy();
+      }
+    });
+  }
   return result;
 };
 const bind = bindings => {
   localImageBitmap = bindings.ImageBitmap;
+  localRawBuffer = bindings.RawBuffer;
 };
 
 module.exports = {

@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/modulesio/smiggles/issues"
   },
-  "homepage": "https://github.com/modulesio/smiggles#readme"
+  "homepage": "https://github.com/modulesio/smiggles#readme",
+  "devDependencies": {
+    "raw-buffer": "0.0.6"
+  }
 }
