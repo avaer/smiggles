@@ -53,283 +53,283 @@ const _numberBuffer = n => {
   const float64Array = Float64Array.from([n]);
   return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
 };
-const serialize = o => {
-  const bs = [];
+const serialize = (o, arrayBuffer = new ArrayBuffer(1024)) => {
+  const buffer = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
   let length = 0;
   const _serialize = o => {
     if (typeof o === 'boolean') {
-      bs.push(_typeBuffer(TYPES.boolean));
+      buffer.set(_typeBuffer(TYPES.boolean), length);
       length += Uint8Array.BYTES_PER_ELEMENT;
 
-      bs.push(_booleanBuffer(o));
+      buffer.set(_booleanBuffer(o), length);
       length += Uint8Array.BYTES_PER_ELEMENT;
     } else if (typeof o === 'number') {
-      bs.push(_typeBuffer(TYPES.number));
+      buffer.set(_typeBuffer(TYPES.number), length);
       length += Uint8Array.BYTES_PER_ELEMENT;
 
       const dataAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
       if (dataAlignBuffer) {
-        bs.push(dataAlignBuffer);
+        buffer.set(dataAlignBuffer, length);
         length += dataAlignBuffer.length;
       }
 
-      bs.push(_numberBuffer(o));
+      buffer.set(_numberBuffer(o), length);
       length += Float64Array.BYTES_PER_ELEMENT;
     } else if (typeof o === 'string') {
-      bs.push(_typeBuffer(TYPES.string));
+      buffer.set(_typeBuffer(TYPES.string), length);
       length += Uint8Array.BYTES_PER_ELEMENT;
 
       const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
       if (lengthAlignBuffer) {
-        bs.push(lengthAlignBuffer);
+        buffer.set(lengthAlignBuffer, length);
         length += lengthAlignBuffer.length;
       }
 
       const stringBuffer = new Buffer(o, 'utf8');
-      bs.push(_lengthBuffer(stringBuffer.length));
+      buffer.set(_lengthBuffer(stringBuffer.length), length);
       length += Uint32Array.BYTES_PER_ELEMENT;
 
-      bs.push(stringBuffer);
+      buffer.set(stringBuffer, length);
       length += stringBuffer.length;
     } else if (typeof o === 'object') {
       if (o === null) {
-        bs.push(_typeBuffer(TYPES.null));
+        buffer.set(_typeBuffer(TYPES.null), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
       } else if (o.constructor.name === 'Array') {
-        bs.push(_typeBuffer(TYPES.array));
+        buffer.set(_typeBuffer(TYPES.array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         for (let i = 0; i < o.length; i++) {
           _serialize(o[i]);
         }
       } else if (o.constructor.name === 'ArrayBuffer') {
-        bs.push(_typeBuffer(TYPES.ArrayBuffer));
+        buffer.set(_typeBuffer(TYPES.ArrayBuffer), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
         const arrayBufferBuffer = new Buffer(o, 0, o.byteLength);
-        bs.push(_lengthBuffer(arrayBufferBuffer.length));
+        buffer.set(_lengthBuffer(arrayBufferBuffer.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-        bs.push(arrayBufferBuffer);
+        buffer.set(arrayBufferBuffer, length);
         length += arrayBufferBuffer.length;
       } else if (o.constructor.name === 'Int8Array') {
-        bs.push(_typeBuffer(TYPES.Int8Array));
+        buffer.set(_typeBuffer(TYPES.Int8Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Uint8Array') {
-        bs.push(_typeBuffer(TYPES.Uint8Array));
+        buffer.set(_typeBuffer(TYPES.Uint8Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Uint8ClampedArray') {
-        bs.push(_typeBuffer(TYPES.Uint8ClampedArray));
+        buffer.set(_typeBuffer(TYPES.Uint8ClampedArray), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Int16Array') {
-        bs.push(_typeBuffer(TYPES.Int16Array));
+        buffer.set(_typeBuffer(TYPES.Int16Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Int16Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Uint16Array') {
-        bs.push(_typeBuffer(TYPES.Uint16Array));
+        buffer.set(_typeBuffer(TYPES.Uint16Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Uint16Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Int32Array') {
-        bs.push(_typeBuffer(TYPES.Int32Array));
+        buffer.set(_typeBuffer(TYPES.Int32Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Int32Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Uint32Array') {
-        bs.push(_typeBuffer(TYPES.Uint32Array));
+        buffer.set(_typeBuffer(TYPES.Uint32Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Float32Array') {
-        bs.push(_typeBuffer(TYPES.Float32Array));
+        buffer.set(_typeBuffer(TYPES.Float32Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Float32Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'Float64Array') {
-        bs.push(_typeBuffer(TYPES.Float64Array));
+        buffer.set(_typeBuffer(TYPES.Float64Array), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.length));
+        buffer.set(_lengthBuffer(o.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
         if (dataAlignBuffer) {
-          bs.push(dataAlignBuffer);
+          buffer.set(dataAlignBuffer, length);
           length += dataAlignBuffer.length;
         }
 
-        const buffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
-        bs.push(buffer);
-        length += buffer.byteLength;
+        const dataBuffer = new Buffer(o.buffer, o.byteOffset, o.byteLength);
+        buffer.set(dataBuffer, length);
+        length += dataBuffer.byteLength;
       } else if (o.constructor.name === 'ImageBitmap') {
-        bs.push(_typeBuffer(TYPES.ImageBitmap));
+        buffer.set(_typeBuffer(TYPES.ImageBitmap), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
-        bs.push(_lengthBuffer(o.width));
+        buffer.set(_lengthBuffer(o.width), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-        bs.push(_lengthBuffer(o.height));
+        buffer.set(_lengthBuffer(o.height), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         const dataLength = o.width * o.height * 4;
         const dataBuffer = new Buffer(o.data.buffer, o.data.byteOffset, dataLength);
-        bs.push(dataBuffer);
+        buffer.set(dataBuffer, length);
         length += dataBuffer.byteLength;
       } else {
-        bs.push(_typeBuffer(TYPES.object));
+        buffer.set(_typeBuffer(TYPES.object), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
 
         const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
         if (lengthAlignBuffer) {
-          bs.push(lengthAlignBuffer);
+          buffer.set(lengthAlignBuffer, length);
           length += lengthAlignBuffer.length;
         }
 
         const keys = Object.keys(o);
-        bs.push(_lengthBuffer(keys.length));
+        buffer.set(_lengthBuffer(keys.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
         for (let i = 0; i < keys.length; i++) {
@@ -337,15 +337,15 @@ const serialize = o => {
 
           const lengthAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
           if (lengthAlignBuffer) {
-            bs.push(lengthAlignBuffer);
+            buffer.set(lengthAlignBuffer, length);
             length += lengthAlignBuffer.length;
           }
 
           const keyBuffer = new Buffer(key, 'utf8');
-          bs.push(_lengthBuffer(keyBuffer.length));
+          buffer.set(_lengthBuffer(keyBuffer.length), length);
           length += Uint32Array.BYTES_PER_ELEMENT;
 
-          bs.push(keyBuffer);
+          buffer.set(keyBuffer, length);
           length += keyBuffer.length;
 
           _serialize(o[key]);
@@ -356,28 +356,10 @@ const serialize = o => {
     }
   };
   _serialize(o);
-  return bs;
+  return arrayBuffer;
 };
-const deserialize = bs => {
-  const b = (() => {
-    if (bs.constructor.name === 'Buffer' && (bs.byteOffset % Float64Array.BYTES_PER_ELEMENT) === 0) {
-      return bs;
-    } else {
-      const bsArray = bs.constructor.name === 'Array' ? bs : [bs];
-      let bSize = 0;
-      for (let i = 0; i < bsArray.length; i++) {
-        bSize += bsArray[i].length;
-      }
-      const result = Buffer.from(new ArrayBuffer(bSize));
-      let length = 0;
-      for (let i = 0; i < bsArray.length; i++) {
-        const srcBuffer = bsArray[i];
-        result.set(srcBuffer, length);
-        length += srcBuffer.length;
-      }
-      return result;
-    }
-  })();
+const deserialize = arrayBuffer => {
+  const b = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
 
   let result;
   let length = 0;
