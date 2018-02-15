@@ -26,6 +26,7 @@ const LINKAGE = {
   INLINE: 0,
   TRANSFER: 1,
 };
+const transferListSymbol = Symbol();
 
 const _typeBuffer = typeId => {
   const uint8Array = Uint8Array.from([typeId]);
@@ -442,13 +443,13 @@ const deserialize = arrayBuffer => {
         const address = Array.from(new Float64Array(b.buffer, b.byteOffset + length, 2));
         length += Float64Array.BYTES_PER_ELEMENT * 2;
 
-        const rawBuffer = localRawBuffer.fromAddress(address);
-        const arrayBuffer = rawBuffer.getArrayBuffer();
-        setter(arrayBuffer);
-
-        if (!transferList.some(transfer => transfer.equals(rawBuffer))) {
+        let rawBuffer = transferList.find(transfer => transfer.peekAddress() === address[0]);
+        if (!rawBuffer) {
+          rawBuffer = localRawBuffer.fromAddress(address);
           transferList.push(rawBuffer);
         }
+        const arrayBuffer = rawBuffer.getArrayBuffer();
+        setter(arrayBuffer);
       }
     } else if (type === TYPES.Int8Array) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
@@ -585,12 +586,8 @@ const deserialize = arrayBuffer => {
   _recurse(newResult => {
     result = newResult;
   });
-  if (transferList.length > 0) { // XXX return this for user management instead
-    process.nextTick(() => {
-      for (let i = 0; i < transferList.length; i++) {
-        transferList[i].destroy();
-      }
-    });
+  if (typeof result === 'object' && result !== null) {
+    result[transferListSymbol] = transferList;
   }
   return result;
 };
