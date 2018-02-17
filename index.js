@@ -64,7 +64,7 @@ const _addressBuffer = address => {
   const float64Array = Float64Array.from(address);
   return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
 };
-const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(1024)) => {
+const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 * 1024)) => { // XXX can auto-compute the right size
   const buffer = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
   let length = 0;
 
