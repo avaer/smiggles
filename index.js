@@ -112,6 +112,11 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
       length += Uint32Array.BYTES_PER_ELEMENT;
       buffer.set(_lengthBuffer(typedArray.length), length);
       length += Uint32Array.BYTES_PER_ELEMENT;
+
+      if (typedArray.buffer[transferListSymbol]) { // elide gc
+        typedArray.buffer[transferListSymbol].toAddress(); // XXX can save object construction here
+        typedArray.buffer[transferListSymbol] = null;
+      }
     }
   };
 
@@ -203,6 +208,11 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
           const addressBuffer = _addressBuffer(address);
           buffer.set(addressBuffer, length);
           length += addressBuffer.byteLength;
+          
+          if (o[transferListSymbol]) { // elide gc
+            o[transferListSymbol].toAddress();
+            o[transferListSymbol] = null;
+          }
         }
       } else if (o.constructor.name === 'Int8Array') {
         _serializeTypedArray(o, TYPES.Int8Array);
