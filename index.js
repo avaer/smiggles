@@ -61,8 +61,8 @@ const _numberBuffer = n => {
   return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
 };
 const _addressBuffer = address => {
-  const float64Array = Float64Array.from(address);
-  return new Buffer(float64Array.buffer, float64Array.byteOffset, float64Array.byteLength);
+  const uint32Array = Uint32Array.from(address);
+  return new Buffer(uint32Array.buffer, uint32Array.byteOffset, uint32Array.byteLength);
 };
 const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 * 1024)) => { // XXX can auto-compute the right size
   const buffer = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
@@ -96,15 +96,17 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
       buffer.set(dataBuffer, length);
       length += dataBuffer.byteLength;
     } else {
-      const addressAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
+      const addressAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
       if (addressAlignBuffer) {
         buffer.set(addressAlignBuffer, length);
         length += addressAlignBuffer.length;
       }
 
       const rawBuffer = new localRawBuffer(typedArray.buffer);
-      buffer.set(_addressBuffer(rawBuffer.toAddress()), length);
-      length += Float64Array.BYTES_PER_ELEMENT * 2;
+      const address = rawBuffer.toAddress();
+      const addressBuffer = _addressBuffer(address);
+      buffer.set(addressBuffer, length);
+      length += addressBuffer.byteLength;
 
       buffer.set(_lengthBuffer(typedArray.byteOffset), length);
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -190,15 +192,17 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
           buffer.set(arrayBufferBuffer, length);
           length += arrayBufferBuffer.length;
         } else {
-          const addressAlignBuffer = _alignBuffer(length, Float64Array.BYTES_PER_ELEMENT);
+          const addressAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
           if (addressAlignBuffer) {
             buffer.set(addressAlignBuffer, length);
             length += addressAlignBuffer.length;
           }
 
           const rawBuffer = new localRawBuffer(o);
-          buffer.set(_addressBuffer(rawBuffer.toAddress()), length);
-          length += Float64Array.BYTES_PER_ELEMENT * 2;
+          const address = rawBuffer.toAddress();
+          const addressBuffer = _addressBuffer(address);
+          buffer.set(addressBuffer, length);
+          length += addressBuffer.byteLength;
         }
       } else if (o.constructor.name === 'Int8Array') {
         _serializeTypedArray(o, TYPES.Int8Array);
@@ -300,12 +304,12 @@ const deserialize = arrayBuffer => {
       setter(typedArray);
       length += typedArray.byteLength;
     } else {
-      length += _getAlignFixOffset(length, Float64Array.BYTES_PER_ELEMENT);
+      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
-      const address = Array.from(new Float64Array(b.buffer, b.byteOffset + length, 2));
-      length += Float64Array.BYTES_PER_ELEMENT * 2;
+      const address = Array.from(new Uint32Array(b.buffer, b.byteOffset + length, 4));
+      length += Uint32Array.BYTES_PER_ELEMENT * 4;
 
-      let rawBuffer = transferList.find(transfer => transfer.peekAddress() === address[0]);
+      let rawBuffer = transferList.find(transfer => transfer.equals(address));
       if (!rawBuffer) {
         rawBuffer = localRawBuffer.fromAddress(address);
         transferList.push(rawBuffer);
@@ -371,12 +375,12 @@ const deserialize = arrayBuffer => {
         setter(arrayBuffer);
         length += arrayBuffer.byteLength;
       } else {
-        length += _getAlignFixOffset(length, Float64Array.BYTES_PER_ELEMENT);
+        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
 
-        const address = Array.from(new Float64Array(b.buffer, b.byteOffset + length, 2));
-        length += Float64Array.BYTES_PER_ELEMENT * 2;
+        const address = Array.from(new Uint32Array(b.buffer, b.byteOffset + length, 4));
+        length += Uint32Array.BYTES_PER_ELEMENT * 4;
 
-        let rawBuffer = transferList.find(transfer => transfer.peekAddress() === address[0]);
+        let rawBuffer = transferList.find(transfer => transfer.equals(address));
         if (!rawBuffer) {
           rawBuffer = localRawBuffer.fromAddress(address);
           transferList.push(rawBuffer);
