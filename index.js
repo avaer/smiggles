@@ -286,6 +286,7 @@ const deserialize = arrayBuffer => {
   let length = 0;
   const _deserializeTypedArray = (constructor, setter) => {
     const linkage = new Uint8Array(b.buffer, b.byteOffset + length, 1)[0];
+    length += Uint8Array.BYTES_PER_ELEMENT;
 
     if (linkage === LINKAGE.INLINE) {
       length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
@@ -358,6 +359,7 @@ const deserialize = arrayBuffer => {
       setter(array);
     } else if (type === TYPES.ArrayBuffer) {
       const linkage = new Uint8Array(b.buffer, b.byteOffset + length, 1)[0];
+      length += Uint8Array.BYTES_PER_ELEMENT;
 
       if (linkage === LINKAGE.INLINE) {
         length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
