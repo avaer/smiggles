@@ -311,6 +311,7 @@ const deserialize = arrayBuffer => {
         transferList.push(rawBuffer);
       }
       const arrayBuffer = rawBuffer.getArrayBuffer();
+      arrayBuffer[transferListSymbol] = rawBuffer; // bind storage lifetime
 
       const typedArrayOffset = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -318,7 +319,6 @@ const deserialize = arrayBuffer => {
       length += Uint32Array.BYTES_PER_ELEMENT;
 
       const typedArray = new constructor(arrayBuffer, typedArrayOffset, typedArrayLength);
-      typedArray[transferListSymbol] = rawBuffer; // bind storage lifetime
       setter(typedArray);
     }
   };
