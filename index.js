@@ -32,7 +32,7 @@ const _typeBuffer = typeId => {
   const uint8Array = Uint8Array.from([typeId]);
   return new Buffer(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
 };
-const _getAlignFixOffset = (n, alignment) => {
+const _alignLength = (n, alignment) => {
   const offset = n % alignment;
   if (offset !== 0) {
     return alignment - offset;
@@ -41,13 +41,13 @@ const _getAlignFixOffset = (n, alignment) => {
   }
 };
 const _alignBuffer = (n, alignment) => {
-  const fixOffset = _getAlignFixOffset(n, alignment);
-  if (fixOffset !== 0) {
-    return Buffer.alloc(fixOffset);
+  const alignLength = _alignLength(n, alignment);
+  if (alignLength !== 0) {
+    return Buffer.alloc(alignLength);
   } else {
     return null;
   }
-}
+};
 const _lengthBuffer = length => {
   const uint32Array = Uint32Array.from([length]);
   return new Buffer(uint32Array.buffer, uint32Array.byteOffset, uint32Array.byteLength);
@@ -64,7 +64,7 @@ const _addressBuffer = address => {
   const uint32Array = Uint32Array.from(address);
   return new Buffer(uint32Array.buffer, uint32Array.byteOffset, uint32Array.byteLength);
 };
-const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 * 1024)) => { // XXX can auto-compute the right size
+const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(getSize(o, transferList))) => {
   const buffer = new Buffer(arrayBuffer, 0, arrayBuffer.byteLength);
   let length = 0;
 
@@ -106,7 +106,7 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
       const address = rawBuffer.toAddress();
       const addressBuffer = _addressBuffer(address);
       buffer.set(addressBuffer, length);
-      length += addressBuffer.byteLength;
+      length += Uint32Array.BYTES_PER_ELEMENT * 4;
 
       buffer.set(_lengthBuffer(typedArray.byteOffset), length);
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -119,7 +119,6 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
       }
     }
   };
-
   const _serialize = o => {
     if (typeof o === 'boolean') {
       buffer.set(_typeBuffer(TYPES.boolean), length);
@@ -190,12 +189,13 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
             length += lengthAlignBuffer.length;
           }
 
-          const arrayBufferBuffer = new Buffer(o, 0, o.byteLength);
-          buffer.set(_lengthBuffer(arrayBufferBuffer.length), length);
+          const arrayBufferLength = o.byteLength;
+          const arrayBufferBuffer = new Buffer(o, 0, arrayBufferLength);
+          buffer.set(_lengthBuffer(arrayBufferLength), length);
           length += Uint32Array.BYTES_PER_ELEMENT;
 
           buffer.set(arrayBufferBuffer, length);
-          length += arrayBufferBuffer.length;
+          length += arrayBufferLength;
         } else {
           const addressAlignBuffer = _alignBuffer(length, Uint32Array.BYTES_PER_ELEMENT);
           if (addressAlignBuffer) {
@@ -207,7 +207,7 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
           const address = rawBuffer.toAddress();
           const addressBuffer = _addressBuffer(address);
           buffer.set(addressBuffer, length);
-          length += addressBuffer.byteLength;
+          length += Uint32Array.BYTES_PER_ELEMENT * 4;
           
           if (o[transferListSymbol]) { // elide gc
             o[transferListSymbol].toAddress();
@@ -251,7 +251,7 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
         const dataLength = o.width * o.height * 4;
         const dataBuffer = new Buffer(o.data.buffer, o.data.byteOffset, dataLength);
         buffer.set(dataBuffer, length);
-        length += dataBuffer.byteLength;
+        length += dataLength;
       } else {
         buffer.set(_typeBuffer(TYPES.object), length);
         length += Uint8Array.BYTES_PER_ELEMENT;
@@ -290,6 +290,7 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(4 * 1024 
     }
   };
   _serialize(o);
+
   return arrayBuffer;
 };
 const deserialize = arrayBuffer => {
@@ -303,18 +304,18 @@ const deserialize = arrayBuffer => {
     length += Uint8Array.BYTES_PER_ELEMENT;
 
     if (linkage === LINKAGE.INLINE) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const typedArrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
 
-      length += _getAlignFixOffset(length, constructor.BYTES_PER_ELEMENT);
+      length += _alignLength(length, constructor.BYTES_PER_ELEMENT);
 
       const typedArray = new constructor(b.buffer, b.byteOffset + length, typedArrayLength);
       setter(typedArray);
       length += typedArray.byteLength;
     } else {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const address = Array.from(new Uint32Array(b.buffer, b.byteOffset + length, 4));
       length += Uint32Array.BYTES_PER_ELEMENT * 4;
@@ -344,12 +345,12 @@ const deserialize = arrayBuffer => {
       setter(new Uint8Array(b.buffer, b.byteOffset + length, 1)[0] !== 0);
       length += Uint8Array.BYTES_PER_ELEMENT;
     } else if (type === TYPES.number) {
-      length += _getAlignFixOffset(length, Float64Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Float64Array.BYTES_PER_ELEMENT);
 
       setter(new Float64Array(b.buffer, b.byteOffset + length, 1)[0]);
       length += Float64Array.BYTES_PER_ELEMENT;
     } else if (type === TYPES.string) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const stringLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -359,7 +360,7 @@ const deserialize = arrayBuffer => {
     } else if (type === TYPES.null) {
       setter(null);
     } else if (type === TYPES.array) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const arrayLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -376,7 +377,7 @@ const deserialize = arrayBuffer => {
       length += Uint8Array.BYTES_PER_ELEMENT;
 
       if (linkage === LINKAGE.INLINE) {
-        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
         const arrayBufferLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
         length += Uint32Array.BYTES_PER_ELEMENT;
@@ -385,7 +386,7 @@ const deserialize = arrayBuffer => {
         setter(arrayBuffer);
         length += arrayBuffer.byteLength;
       } else {
-        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
         const address = Array.from(new Uint32Array(b.buffer, b.byteOffset + length, 4));
         length += Uint32Array.BYTES_PER_ELEMENT * 4;
@@ -418,7 +419,7 @@ const deserialize = arrayBuffer => {
     } else if (type === TYPES.Float64Array) {
       _deserializeTypedArray(Float64Array, setter);
     } else if (type === TYPES.ImageBitmap) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const width = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
@@ -432,14 +433,14 @@ const deserialize = arrayBuffer => {
 
       setter(new localImageBitmap(width, height, data));
     } else if (type === TYPES.object) {
-      length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
       const numKeys = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
       length += Uint32Array.BYTES_PER_ELEMENT;
 
       const object = {};
       for (let i = 0; i < numKeys; i++) {
-        length += _getAlignFixOffset(length, Uint32Array.BYTES_PER_ELEMENT);
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
         const keyLength = new Uint32Array(b.buffer, b.byteOffset + length, 1)[0];
         length += Uint32Array.BYTES_PER_ELEMENT;
@@ -461,6 +462,141 @@ const deserialize = arrayBuffer => {
   });
   return result;
 };
+const getSize = (o, transferList = []) => {
+  let length = 0;
+
+  const _serializeTypedArray = (typedArray, type) => {
+    length += Uint8Array.BYTES_PER_ELEMENT;
+
+    const linkage = transferList.includes(typedArray.buffer) ? LINKAGE.TRANSFER : LINKAGE.INLINE;
+    length += Uint8Array.BYTES_PER_ELEMENT;
+
+    if (linkage === LINKAGE.INLINE) {
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+      length += Uint32Array.BYTES_PER_ELEMENT;
+
+      length += _alignLength(length, typedArray.constructor.BYTES_PER_ELEMENT);
+
+      length += typedArray.byteLength;
+    } else {
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+      length += Uint32Array.BYTES_PER_ELEMENT * 4;
+
+      length += Uint32Array.BYTES_PER_ELEMENT;
+      length += Uint32Array.BYTES_PER_ELEMENT;
+    }
+  };
+  const _serialize = o => {
+    if (typeof o === 'boolean') {
+      length += Uint8Array.BYTES_PER_ELEMENT;
+
+      length += Uint8Array.BYTES_PER_ELEMENT;
+    } else if (typeof o === 'number') {
+      length += Uint8Array.BYTES_PER_ELEMENT;
+
+      length += _alignLength(length, Float64Array.BYTES_PER_ELEMENT);
+
+      length += Float64Array.BYTES_PER_ELEMENT;
+    } else if (typeof o === 'string') {
+      length += Uint8Array.BYTES_PER_ELEMENT;
+
+      length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+      length += Uint32Array.BYTES_PER_ELEMENT;
+
+      const stringBuffer = new Buffer(o, 'utf8'); // XXX can be a constant multiplier of string.length
+      length += stringBuffer.length;
+    } else if (typeof o === 'object') {
+      if (o === null) {
+        length += Uint8Array.BYTES_PER_ELEMENT;
+      } else if (o.constructor.name === 'Array') {
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        for (let i = 0; i < o.length; i++) {
+          _serialize(o[i]);
+        }
+      } else if (o.constructor.name === 'ArrayBuffer') {
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        const linkage = transferList.includes(o) ? LINKAGE.TRANSFER : LINKAGE.INLINE;
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        if (linkage === LINKAGE.INLINE) {
+          length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+          length += Uint32Array.BYTES_PER_ELEMENT;
+
+          const arrayBufferLength = o.byteLength;
+          length += arrayBufferLength;
+        } else {
+          length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+          length += Uint32Array.BYTES_PER_ELEMENT * 4;
+        }
+      } else if (o.constructor.name === 'Int8Array') {
+        _serializeTypedArray(o, TYPES.Int8Array);
+      } else if (o.constructor.name === 'Uint8Array') {
+        _serializeTypedArray(o, TYPES.Uint8Array);
+      } else if (o.constructor.name === 'Uint8ClampedArray') {
+        _serializeTypedArray(o, TYPES.Uint8ClampedArray);
+      } else if (o.constructor.name === 'Int16Array') {
+        _serializeTypedArray(o, TYPES.Int16Array);
+      } else if (o.constructor.name === 'Uint16Array') {
+        _serializeTypedArray(o, TYPES.Uint16Array);
+      } else if (o.constructor.name === 'Int32Array') {
+        _serializeTypedArray(o, TYPES.Int32Array);
+      } else if (o.constructor.name === 'Uint32Array') {
+        _serializeTypedArray(o, TYPES.Uint32Array);
+      } else if (o.constructor.name === 'Float32Array') {
+        _serializeTypedArray(o, TYPES.Float32Array);
+      } else if (o.constructor.name === 'Float64Array') {
+        _serializeTypedArray(o, TYPES.Float64Array);
+      } else if (o.constructor.name === 'ImageBitmap') {
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        const dataLength = o.width * o.height * 4;
+        length += dataLength;
+      } else {
+        length += Uint8Array.BYTES_PER_ELEMENT;
+
+        length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+        length += Uint32Array.BYTES_PER_ELEMENT;
+
+        const keys = Object.keys(o);
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i];
+
+          length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
+
+          length += Uint32Array.BYTES_PER_ELEMENT;
+
+          const keyBuffer = new Buffer(key, 'utf8'); // XXX can be a constant multiplier of string.length
+          length += keyBuffer.length;
+
+          _serialize(o[key]);
+        }
+      }
+    } else {
+      throw new Error('cannot serialize: ' + JSON.stringify(o));
+    }
+  };
+  _serialize(o);
+
+  return length;
+};
 const bind = bindings => {
   if (bindings.ImageBitmap !== undefined) {
     localImageBitmap = bindings.ImageBitmap;
@@ -473,5 +609,6 @@ const bind = bindings => {
 module.exports = {
   serialize,
   deserialize,
+  getSize,
   bind,
 };
