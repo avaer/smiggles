@@ -19,8 +19,8 @@ const TYPES = {
   ImageBitmap: id++,
 };
 
-let localImageBitmap = typeof ImageBitmap !== 'undefined' ? ImageBitmap : null;
-let localRawBuffer = typeof RawBuffer !== 'undefined' ? RawBuffer : null;
+let localImageBitmap = null;
+let localRawBuffer = null;
 
 const LINKAGE = {
   INLINE: 0,
