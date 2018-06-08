@@ -363,6 +363,8 @@ const deserialize = arrayBuffer => {
       length += stringLength;
     } else if (type === TYPES.null) {
       setter(null);
+    } else if (type === TYPES.undefined) {
+      setter(undefined);
     } else if (type === TYPES.array) {
       length += _alignLength(length, Uint32Array.BYTES_PER_ELEMENT);
 
