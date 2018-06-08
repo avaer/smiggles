@@ -17,6 +17,7 @@ const TYPES = {
   Float32Array: id++,
   Float64Array: id++,
   ImageBitmap: id++,
+  undefined: id++,
 };
 
 let localImageBitmap = null;
@@ -154,6 +155,9 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(getSize(o
 
       buffer.set(stringBuffer, length);
       length += stringBuffer.length;
+    } else if (typeof o === 'undefined') {
+      buffer.set(_typeBuffer(TYPES.undefined), length);
+      length += Uint8Array.BYTES_PER_ELEMENT;
     } else if (typeof o === 'object') {
       if (o === null) {
         buffer.set(_typeBuffer(TYPES.null), length);
@@ -508,6 +512,8 @@ const getSize = (o, transferList = []) => {
 
       const stringBuffer = new Buffer(o, 'utf8'); // XXX can be a constant multiplier of string.length
       length += stringBuffer.length;
+    } else if (typeof o === 'undefined') {
+      length += Uint8Array.BYTES_PER_ELEMENT;
     } else if (typeof o === 'object') {
       if (o === null) {
         length += Uint8Array.BYTES_PER_ELEMENT;
