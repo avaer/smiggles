@@ -266,7 +266,7 @@ const serialize = (o, transferList = [], arrayBuffer = new ArrayBuffer(getSize(o
           length += lengthAlignBuffer.length;
         }
 
-        const keys = Object.keys(o);
+        const keys = Object.keys(o).filter(k => typeof o[k] !== 'function');
         buffer.set(_lengthBuffer(keys.length), length);
         length += Uint32Array.BYTES_PER_ELEMENT;
 
@@ -583,7 +583,7 @@ const getSize = (o, transferList = []) => {
 
         length += Uint32Array.BYTES_PER_ELEMENT;
 
-        const keys = Object.keys(o);
+        const keys = Object.keys(o).filter(k => typeof o[k] !== 'function');
         for (let i = 0; i < keys.length; i++) {
           const key = keys[i];
 
