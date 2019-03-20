@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/modulesio/smiggles#readme",
   "devDependencies": {
-    "raw-buffer": "0.0.19"
+    "raw-buffer": "0.0.20"
   }
 }
